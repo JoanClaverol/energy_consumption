@@ -7,7 +7,7 @@ require(pacman)
 p_load(fpp2, tidyverse, lubridate, plotly, beanplot)
 
 df2 <- read_rds("Datasets/CleanTotalData.rds")
-df2.weather <- read_rds("Datasets/CleanWeatherData.rds")
+df2_weather <- read_rds("Datasets/CleanWeatherData.rds")
 
 
 # Seasons effect ----
@@ -23,7 +23,7 @@ ggplotly(g1)
 df2 %>% mutate(month = month(DateTime, label = T, locale = "us"), year = year(DateTime)) %>% group_by(year, month) %>% 
   summarise(mean_A.E. = mean(ActiveEnergy)) -> x
 ts <- ts(x$mean_A.E., start = 2007, frequency = 12)
-ggseasonplot(ts, polar = T) + theme_bw() + labs(title = "Mean energy consumption/month") + ylab("Mean active energy Watts/h")
+ggseasonplot(ts, polar = T) + theme_bw() + labs(title = "Mean energy consumption/month") + ylab("Mean active energy Watts/h") 
 
 # 3rd way to show your results
 ggsubseriesplot(ts) + theme_bw()
@@ -78,7 +78,7 @@ g3
 # temperature effect ----
 
 # How is the relation between the avg temperature and teh active energy consumed
-df2.weather %>% 
+df2_weather %>% 
   ggplot(aes(x = date)) +
     geom_line(aes(y = ActiveEnergy), col = "red", alpha = 0.4) + 
     geom_smooth(aes(y = ActiveEnergy), col = "red", se = F) +
@@ -92,14 +92,14 @@ df2.weather %>%
        subtitle = "red = average active energy in watts\nblue = average temperature in ºC")
   
 # other ways to see the relation
-ts <- ts(df2.weather[c("ActiveEnergy","Avg.Temp")], start = 2007, frequency = 365.25)
+ts <- ts(df2_weather[c("ActiveEnergy","Avg.Temp")], start = 2007, frequency = 365.25)
 autoplot(ts[,c("ActiveEnergy","Avg.Temp")], facets = T) + ylab("") + labs(title = "Relation btwn energy consumptions and temperature")
 # there seems there is a high negative correlation between temeprature and energy consumption
 
 
 
 # Relation between active energy consumption and temperature
-df2.weather %>% 
+df2_weather %>% 
   ggplot(aes(ActiveEnergy, Avg.Temp)) + geom_point() + geom_smooth() -> g4
 ggplotly(g4)
 
@@ -107,13 +107,13 @@ ggplotly(g4)
 # Correlation btwn var ----
 
 # all the information
-plot(df2.weather) 
+plot(df2_weather) 
 
 # Correlation between submetters
-cor(df2.weather[c("ActiveEnergy","Kitchen","Laundry","W.A_HeatCold")],use="complete.obs", method="pearson")
+cor(df2_weather[c("ActiveEnergy","Kitchen","Laundry","W.A_HeatCold")],use="complete.obs", method="pearson")
 
 # relation between variables
-df2.weather %>% select(ActiveEnergy,Kitchen,Laundry,W.A_HeatCold) %>% 
+df2_weather %>% select(ActiveEnergy,Kitchen,Laundry,W.A_HeatCold) %>% 
   gather("Kitchen","Laundry","W.A_HeatCold", key = "submetters", value = "value") %>% 
   ggplot(aes(x = value, y = ActiveEnergy, color = submetters))+
     geom_point() + geom_smooth(se = F) + 
@@ -124,17 +124,12 @@ ggplotly(g5)
 
 # ploting potential predictors
 
-
-<<<<<<< HEAD
-ts <- ts(df2.weather[c("ActiveEnergy","W.A_HeatCold","Kitchen","Laundry")], start = 2007, frequency = 365.25)
-autoplot(ts[,1:4], facets = T)
-GGally::ggpairs(as.data.frame(ts[,1:4]))
-
-# changes
-=======
-ts <- ts(df2.weather[c("ActiveEnergy","UnkownEnergy","W.A_HeatCold","Kitchen","Laundry")], start = 2007, frequency = 365.25)
+ts <- ts(df2_weather[c("ActiveEnergy","UnkownEnergy","W.A_HeatCold","Kitchen","Laundry")], start = 2007, frequency = 365.25)
 autoplot(ts[,1:5], facets = T)
 GGally::ggpairs(as.data.frame(ts[,1:5]))
 
-ausbeer
->>>>>>> test
+# Autocorrelation plots
+# it helps us to understand how lagged values affect in a time series
+ts <- ts(df2_weather, start = 2007, frequency = 365.25)
+ggAcf(ts[,c("ActiveEnergy")], lag = 1826)
+# There is a trend which is showing a decreasment of the ActiveEnergy correlation, it shows us there is a trend which is normalizing the energy consumption

@@ -7,9 +7,11 @@ p_load(tidyverse, mice, lubridate)
 # Uploading data ----
 
 # House data
-df1 <- read_delim("Datasets/household_power_consumption.txt", delim = ";", col_types = cols(
-  Date = col_date(format = "%d/%m/%Y")
-))
+df1 <- read_delim("Datasets/household_power_consumption.txt", delim = ";", 
+                  col_types = cols(
+                    Date = col_date(format = "%d/%m/%Y")
+                    )
+                  )
 
 # Weather region data
 weather <- read_csv("Datasets/weather_conditions.csv") # downloaded for the webpage https://www.ncdc.noaa.gov
