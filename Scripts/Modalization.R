@@ -13,10 +13,7 @@ df.weather <- read_rds("Datasets/CleanWeatherData.rds")
 # we are going to create a linear model to predict the active coume of the house, and will take into consideration two main variables, avg temperature. 
 
 mod.lm <- lm(ActiveEnergy ~ Avg.Temp, data = df.weather)
-
 plot(mod.lm)
-
-
 
 # Prepare and analyse the data ----
 
