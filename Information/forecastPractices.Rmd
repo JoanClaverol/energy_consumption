@@ -1,31 +1,59 @@
+---
+title: "The forecaster's toolbox"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Simple forecasting methods
+
+```{r}
 require(pacman)
 p_load(fpp2, tidyverse, lubridate)
-
-data <- read_rds("Datasets/CleanWeatherData.rds")
-
+data <- read_rds("../Datasets/CleanWeatherData.rds")
 data <- data %>% filter(year(date)!=2011)
+```
 
+Creation of a time series per day:
+
+```{r}
 ts <- ts(data$ActiveEnergy, start = 2007, frequency = 365.25)
 h <- 90
-# Average method
-plot(meanf(ts, h)) # h is the forecast horizon, 90 days
+```
 
-# Naïve method
+## Average method
+
+```{r}
+plot(meanf(ts, h)) # h is the forecast horizon, 90 days
+```
+
+## Naïve method 
+
+```{r}
 # set all forecasts to be the value of the last observation. This method works remarkably well for many economic and financial time series.
 plot(naive(ts, h))
 plot(rwf(ts, h))
 # Because a naïve forecast is optimal when data follow a random walk (see Section 8.1), these are also called random walk forecasts.
+```
 
-# Seasonal naïve method
+## Seasonal naïve method
+
+```{r}
 # A similar method is useful for highly seasonal data. In this case, we set each forecast to be equal to the last observed value from the same season of the year
 plot(snaive(ts, h))
 # very good predictions 
+```
 
-# Drift method
+## Drift method
+
+```{r}
 # A variation on the naïve method is to allow the forecasts to increase or decrease over time, where the amount of change over time (called the drift) is set to be the average change seen in the historical data. 
 plot(rwf(ts, h, drift=TRUE))
+```
 
+## Ploting different forecasts
 
+```{r}
 # Plot some seasonal forecasts 
 autoplot(ts) +
   autolayer(meanf(ts, h),
@@ -37,7 +65,9 @@ autoplot(ts) +
   ggtitle("Forecasts for quarterly beer production") +
   xlab("Year") + ylab("Megalitres") +
   guides(colour=guide_legend(title="Forecast"))
+```
 
+```{r}
 # Plot some non-seasonal forecasts 
 autoplot(goog200) +
   autolayer(meanf(goog200, h=40),
@@ -49,8 +79,18 @@ autoplot(goog200) +
   ggtitle("Google stock (daily ending 6 Dec 2013)") +
   xlab("Day") + ylab("Closing Price (US$)") +
   guides(colour=guide_legend(title="Forecast"))
+```
 
-# Calendar adjustments
+# Transformation and adjustments
+
+1. calendar adjustments
+2. population adjustments
+3. Inflation adjustments
+4. Mathematical transformations
+
+## Calendar adjustments
+
+```{r}
 # Some of the variation seen in seasonal data may be due to simple calendar effects. In such cases, it is usually much easier to remove the variation before fitting a forecasting model. The monthdays() function will compute the number of days in each month or quarter.
 
 data %>% 
@@ -64,8 +104,58 @@ ts_month_norm <- cbind(ts_month,
 autoplot(ts_month_norm, facet=TRUE) +
   xlab("Years") + ylab("Watts/h") +
   ggtitle("Active energy")
-# Population adjustments
-# Inflation adjustments
+```
+
+## Mathematical tranformations
+
+```{r}
 # Mathematical transformations
 lambda <- BoxCox.lambda(ts_month)
 autoplot(BoxCox(ts_month, lambda))
+```
+
+## Residual diagnosis
+
+Proporties of the residuals:
+
+1. The residuals are uncorrelated. If there are correlations between residuals, then there is information left in the residuals which should be used in computing forecasts.
+2. The residuals have zero mean. If the residuals have a mean other than zero, then the forecasts are biased.
+
+Any forecasting method that does not satisfy these properties can be improved. Also has the following properties:
+
+3. The residuals have constant variance.
+4. The residuals are normally distributed.
+
+### Example non seasonal data
+
+For stock market prices and indexes, the best forecasting method is often the naïve method. 
+
+```{r}
+autoplot(goog200) +
+  xlab("Day") + ylab("Closing Price (US$)") +
+  ggtitle("Google Stock (daily ending 6 December 2013)")
+```
+
+Let's check at the errors using the naïve method, :
+
+```{r}
+autoplot(naive(goog200))
+
+res <- residuals(naive(goog200))
+autoplot(res) +
+  xlab("Day") + ylab("Closing Price (US$)") +
+  ggtitle("Google Stock (daily ending 6 December 2013)")
+```
+
+Understanding the errors distribution through histograms:
+
+```{r}
+gghistogram(res) + ggtitle("Histogram of residuals")
+```
+
+Looking for errors in the distribution of the data:
+
+```{r}
+ggAcf(res) + ggtitle("ACF of residuals")
+```
+
