@@ -317,3 +317,9 @@ data.frame(h = 1:8, MSE = mse) %>%
   ggplot(aes(x = h, y = MSE)) + geom_point()
 ```
 
+## Prediction intervals 
+
+```{r}
+autoplot(naive(goog200))
+```
+
