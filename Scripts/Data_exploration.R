@@ -131,5 +131,10 @@ GGally::ggpairs(as.data.frame(ts[,1:5]))
 # Autocorrelation plots
 # it helps us to understand how lagged values affect in a time series
 ts <- ts(df2_weather, start = 2007, frequency = 365.25)
-ggAcf(ts[,c("ActiveEnergy")], lag = 1826)
+ggAcf(ts[,c("ActiveEnergy")], lag.max = 365.25*4)
 # There is a trend which is showing a decreasment of the ActiveEnergy correlation, it shows us there is a trend which is normalizing the energy consumption
+
+
+
+ts <- ts(df2, start = 2007, frequency = 365.25*24*60)
+ggAcf(ts[,c("ActiveEnergy")])
