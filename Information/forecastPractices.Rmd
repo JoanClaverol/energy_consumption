@@ -1,8 +1,9 @@
 ---
 title: "The forecaster's toolbox"
+author: "Notes from Forecasting: principles and practices"
 output:
   html_document:
-    df_print: paged
+    toc: true
 ---
 
 ## Simple forecasting methods
@@ -317,9 +318,368 @@ data.frame(h = 1:8, MSE = mse) %>%
   ggplot(aes(x = h, y = MSE)) + geom_point()
 ```
 
-## Prediction intervals 
+## The forecast package in R
 
-```{r}
-autoplot(naive(goog200))
+Main functions included into the library fpp2 (caontains the forecast package):
+
+- meanf()
+- naive(), snaive()
+- rwf()
+- croston()
+- stlf()
+- ses()
+- holt(), hw()
+- splinef()
+- thetaf()
+- forecast() -> function to produce forecasts from that model.
+
+# Exercices 
+
+1. For the following series, find an appropriate Box-Cox transformation in order to stabilise the variance.
+
+##### usnetelec {.tabset}
+
+###### autoplot
+
+```{r .tabset}
+autoplot(usnetelec)
 ```
 
+###### autoplot with lambda to stabilise the variance
+
+```{r}
+# we are applying a tranformation but it doesn't need it
+lambda <- BoxCox.lambda(usnetelec)
+autoplot(BoxCox(usnetelec, lambda))
+```
+
+##### usgdp {.tabset}
+
+###### autoplot usgdp
+
+```{r}
+autoplot(usgdp)
+```
+
+###### variance normalization with lambda
+
+```{r}
+# we are applying a tranformation but it doesn't need it 
+lambda <- BoxCox.lambda(usgdp)
+autoplot(BoxCox(usgdp, lambda))
+```
+
+##### mcopper {.tabset}
+
+Monthly copper prices. Copper, grade A, electrolytic wire bars/cathodes,LME,cash (pounds/ton) 
+
+###### autoplot
+
+```{r}
+autoplot(mcopper)
+```
+
+###### variance stabilization with lambda
+
+```{r}
+lambda <- BoxCox.lambda(mcopper)
+autoplot(BoxCox(mcopper, lambda = 0))
+```
+
+##### enplanements {.tabset}
+
+"Domestic Revenue Enplanements (millions): 1996-2000. SOURCE: Department of Transportation, Bureau of Transportation Statistics, Air Carrier Traffic Statistic Monthly.
+
+###### autoplot 
+
+```{r}
+autoplot(enplanements)
+```
+
+###### variance stabilization with lambda
+
+```{r}
+# We will do a log transformation
+enplanements %>% BoxCox(lambda = 0) %>% autoplot()
+```
+
+2. Why is a Box-Cox transformation unhelpful for the cangas data?
+
+##### cangas dataset {.tabset}
+
+cangas = Monthly Canadian gas production, billions of cubic metres, January 1960 - February 2005
+
+###### autoplot cangas
+
+```{r}
+autoplot(cangas)
+```
+
+###### applying lambda to deal with variance
+
+```{r}
+autoplot(BoxCox(cangas, lambda = BoxCox.lambda(cangas)))
+```
+
+Here the variance of the series changes, but not with the level of the series. Box Cox transformations are designed to handle series where the variance increases (or decreases) with the level of the series.
+
+3. What Box-Cox transformation would you select for your retail data (from Exercise 3 in Section 2.10)?
+
+##### working with retail data {.tabset}
+
+###### autplot
+
+```{r}
+retaildata <- readxl::read_xlsx("../Datasets/practice_datasets/retail.xlsx", skip = 1)
+myts <- ts(retaildata[,"A3349873A"], start = c(1982,4), frequency = 12)
+autoplot(myts)
+```
+
+###### checking boxcox to deal with variance
+
+From visual inspection, a log transformation would be appropriate here. It also makes sense, as retail expenditure is likely to increase proportionally to population, and therefore the seasonal fluctuations are likely to be proportional to the level of the series. It has the added advantage of being easier to explain than some other transformations. Finally, it is relatively close to the automatically selected value of `BoxCox.lambda(myts)` = `r BoxCox.lambda(myts)`.
+
+If you have selected a different series from the retail data set, you might choose a different transformation.
+
+```{r}
+lambda = 0
+autoplot(BoxCox(myts, lambda = lambda))
+```
+
+4. For each of the following series, make a graph of the data. If transforming seems appropriate, do so and describe the effect.
+
+##### dole {.tabset}
+
+Monthly total of people on unemployment benefits in Australia (Jan 1965 – Jul 1992).
+
+###### no transformation
+
+```{r}
+autoplot(dole)
+```
+
+###### transformation
+
+```{r}
+lambda <- BoxCox.lambda(dole)
+dole %>% BoxCox(lambda) %>% autoplot() + ylab(paste("BoxCox(# people,", round(lambda, 2), ")"))
+```
+
+##### usdeaths {.tabset}
+
+Monthly accidental deaths in USA.
+
+###### no transformation
+
+The data was transformed using Box-Cox transformation with parameter λ=0.33. The transformation has stabilized the variance.
+
+```{r}
+autoplot(usdeaths)
+```
+
+###### transformation
+
+```{r}
+lambda <- BoxCox.lambda(usdeaths)
+usdeaths %>% BoxCox(lambda) %>% autoplot() + ylab(paste("death, lambda =", round(lambda, 2)))
+```
+
+
+##### bricksq {.tabset}
+
+Australian quarterly clay brick production: 1956–1994.
+
+###### transformation 
+
+```{r}
+autoplot(bricksq)
+```
+
+###### no transformation
+
+The time series was transformed using a Box-Cox transformation with λ=0.25. The transformation has stabilized the variance.
+
+```{r}
+lambda <- BoxCox.lambda(bricksq)
+bricksq %>% BoxCox(lambda) %>% autoplot() + ylab(paste("BoxCox(# mln bricks, lambda =", round(lambda, 2), ")"))
+```
+
+5. Calculate the residuals from a seasonal naïve forecast applied to the quarterly Australian beer production data from 1992. The following code will help.
+
+##### australina beer production {.tabset}
+
+Monthly Australian beer production: Jan 1991 – Aug 1995.
+
+```{r}
+beer <- window(ausbeer, start=1992)
+```
+
+###### Seasonal naive method
+
+```{r}
+fc <- snaive(beer)
+autoplot(fc)
+```
+
+###### ploting errors
+
+```{r}
+res <- residuals(fc)
+autoplot(res)
+```
+
+Test if the residuals are white noise and normally distributed.
+
+```{r}
+checkresiduals(fc)
+```
+
+What do you conclude?
+
+The residuals are correlated: the Null of no joint autocorrelation is clearly rejected. We can also see a significant spike on the seasonal (4th lag) in the ACF. There is considerable information remaining in the residuals which has not been captured with the seasonal naïve method. The residuals do not appear to be too far from Normally distributed.
+
+6. Repeat the exercise for the WWWusage and bricksq data. Use whichever of naive() or snaive() is more appropriate in each case.
+
+##### WWWusage {.tabset}
+
+A time series of the numbers of users connected to the Internet through a server every minute.
+
+###### autoplot
+
+```{r}
+autoplot(WWWusage)
+```
+
+###### pred: naive method
+
+```{r}
+fr_n <- naive(WWWusage, h = 15)
+autoplot(fr_n)
+```
+
+###### error analysis naïve
+
+Residuals are correlated as shown by both the LB test and the ACF. They seem to be normally distributed. There is considerable information remaining in the residuals which has not been captured with the naïve method.
+
+```{r}
+checkresiduals(fr_n)
+```
+
+##### bricksq {.tabset}
+
+Australian quarterly clay brick production: 1956–1994.
+
+###### autoplot
+
+```{r}
+autoplot(bricksq)
+```
+
+###### pred: seasonal naive method
+
+```{r}
+fr_sn <- snaive(bricksq)
+autoplot(fr_sn)
+```
+
+###### err. analysis seas.naïve
+
+Residuals are correlated as shown by both the LB test and the ACF and do not appear to be normal (they have a long left tail). There is considerable information remaining in the residuals which has not been captured with the seasonal naïve method.
+
+```{r}
+checkresiduals(fr_sn)
+```
+
+7. Are the following statements true or false? Explain your answer.
+
+a. Good forecast methods should have normally distributed residuals. FALSE
+
+Not true. It is helpful to have normally distributed residuals because it makes the calculation of prediction intervals easier, and it means that least squares estimates of parameters are also equivalent (or close to) maximum likelihood estimates. But it doesn’t make the forecasts better. If the residuals are not normally-distributed, one way to produce prediction intervals is to use a bootstrapped approach.
+
+b. A model with small residuals will give good forecasts. FALSE
+
+Not true. An over-fitted model will have small residuals (relative to other models), but will probably not give good forecasts.
+
+c. The best measure of forecast accuracy is MAPE. FALSE
+
+Not true. MAPE is useful in some circumstances — for example, in comparing forecasts on different scales, or with different units, and is relatively easy to understand. But it is not appropriate if the data includes zeros, or if the data has no natural zero.
+
+d. If your model doesn’t forecast well, you should make it more complicated. FALSE
+
+Not true. Some things are hard to forecast, and making a model more complicated can make the forecasts worse.
+
+e. Always choose the model with the best forecast accuracy as measured on the test set. FALSE
+
+Not true. Imagine the test set has only a single observation, or a very small number of observations. We don’t want to select a model based on a small test set. A better approach is to use time-series cross-validation, which is based on a much larger set of test sets. Later, we will learn about the AIC statistic which is an alternative way to select a model and is often more helpful than a simple test set.
+
+8. For your retail time series (from Exercise 3 in Section 2.10):
+
+a. Split the data into two parts using
+
+```{r}
+myts.train <- window(myts, end=c(2010,12))
+myts.test <- window(myts, start=2011)
+```
+
+b. Check that your data have been split appropriately by producing the following plot.
+
+```{r}
+autoplot(myts) +
+  autolayer(myts.train, series="Training") +
+  autolayer(myts.test, series="Test")
+```
+
+c. Calculate forecasts using snaive applied to myts.train.
+
+```{r}
+fc <- snaive(myts.train)
+autoplot(fc)
+```
+
+d. Compare the accuracy of your forecasts against the actual values stored in myts.test.
+
+```{r}
+accuracy(fc,myts.test)
+```
+
+e. Check the residuals.
+
+```{r}
+checkresiduals(fc)
+```
+
+The residuals do not look like white noise there are lots of dynamics left over that need to be explored. They do look close to normal although the tails may be too long.
+
+Do the residuals appear to be uncorrelated and normally distributed?
+
+Yes, they do
+
+f. How sensitive are the accuracy measures to the training/test split?
+
+The accuracy measure are always sensitive to this split. There are better ways to check the robustness of the methods in terms of accuracy such as using a rolling window (possible in this case as we have lots of data) or ts.cv.
+
+
+9. "visnights" contains quarterly visitor nights (in millions) from 1998 to 2016 for twenty regions of Australia.
+
+```{r}
+autoplot(visnights)
+stats::start(visnights)
+stats::end(visnights)
+stats::frequency(visnights)
+```
+
+a. Use window() to create three training sets for visnights[,"QLDMetro"], omitting the last 1, 2 and 3 years; call these train1, train2, and train3, respectively. For example:
+
+```{r}
+train1 <- window(visnights[, "QLDMetro"], end = c(2015, 4))
+train2 <- window(visnights[, "QLDMetro"], end = c(2014, 4))
+train3 <- window(visnights[, "QLDMetro"], end = c(2013, 4))
+```
+
+Creation 
+
+
+
+b. Compute one year of forecasts for each training set using the snaive() method. Call these fc1, fc2 and fc3, respectively.
+
+c. Use accuracy() to compare the MAPE over the three test sets. Comment on these.
