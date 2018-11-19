@@ -5,42 +5,56 @@ require(pacman)
 p_load(tidyverse, lubridate, forecast)
 
 # Uploading data
-df3 <- read_rds("Datasets/CleanTotalData.rds")
+df <- read_rds("Datasets/CleanTotalData.rds")
 df.weather <- read_rds("Datasets/CleanWeatherData.rds")
-
-# Prediction with weathar dataset ----
-
-# we are going to create a linear model to predict the active coume of the house, and will take into consideration two main variables, avg temperature. 
-
-mod.lm <- lm(ActiveEnergy ~ Avg.Temp, data = df.weather)
-plot(mod.lm)
 
 # Prepare and analyse the data ----
 
 # We are going to start the analysys from 2017-01-01
-df3 <- df3 %>%
-  year(year = year(DateTime),month = month(DateTime), week = week(DateTime)) %>% 
-  group_by(year,month,week) %>%
-  summarise(mean = mean(ActiveEnergy)) 
-
-# Understanding the distribution of the results
-diff(df3$mean, lag = 365) -> d
-hist(d, probability = T, ylim = c(0,0.8), breaks = 30, main = "Energy consumption", col = "green")
-lines(density(d), lwd=2)
+m.df <- df %>%
+  filter(year(DateTime) > 2006) %>% 
+  mutate(year = year(DateTime), 
+         month = month(DateTime)) %>%
+  group_by(year, month) %>% 
+  summarise(ActiveEnergy_avg = mean(ActiveEnergy), 
+            Kitchen_avg = mean(Kitchen),
+            Laundry_avg = mean(Laundry),
+            AirWarm_avg = mean(W.A_HeatCold),
+            Unknown_avg = mean(UnkownEnergy))
 
 # time series creation ----
 
+mts<- ts(m.df[,"ActiveEnergy_avg"], start = c(2007), frequency = 12)
 
-df.ts <- ts(df3$mean, start = c(2007), frequency = 52)
-df.decompose <- decompose(df.ts)
 
-# Looking for the trend of the time series
-df.season.adjusted <- df.ts - df.decompose$seasonal
-plot(df.ts)
-lines(df.season.adjusted, col = "blue", lwd = 3)
+# visualization ----
 
+autoplot(mts) + ylab("energy consumed in Watts/h") + labs(title = "Average energy consumed by month")
+
+
+# train and test ----
+
+train.mts <- window(mts, end = c(2009, 11))
+test.mts <- window(mts, start = c(2009, 12))
+
+
+# modalization with seasonal algorithms ----
+
+h <- length(test.mts)
+m.mf <- meanf(train.mts, h = h)
+m.rw <- rwf(train.mts, h = h)
+m.sn <- snaive(train.mts, h = h)
+
+autoplot(train.mts) +
+  autolayer(m.sn, series = "Season naïve method") +
+  autolayer(m.mf$mean, series = "Mean method") +
+  autolayer(m.rw$mean, series = "Naïve method")
+
+accuracy(m.sn, test.mts)
+checkresiduals(m.sn)
 
 # Modalization ----
+
 
 ####    Forecasting   ####
 # Doing a linear model with the tsml() function
