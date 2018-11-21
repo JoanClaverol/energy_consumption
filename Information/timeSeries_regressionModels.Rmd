@@ -1,0 +1,178 @@
+---
+title: "Time series regression models"
+author: "Joan Claverol_Curso de Juan Gabriel Gomila_Plataforma Udemy"
+date: "21 de noviembre de 2018"
+output: 
+  html_document:
+    toc: true
+    df_print: paged
+    code_folding: hide
+---
+
+```{r}
+require(pacman)
+p_load(fpp2)
+```
+
+# The linear model
+
+Example US consumption expenditure
+
+```{r}
+autoplot(uschange[,c("Consumption", "Income")]) +
+  ylab("% change") + xlab("Year") + labs(caption = "Percentage changes in personal consumption expenditure and personal income for the US.")
+```
+
+We look fot the linear model inside this data:
+
+```{r}
+uschange %>%
+  as.data.frame() %>%
+  ggplot(aes(x=Income, y=Consumption)) +
+    ylab("Consumption (quarterly % change)") +
+    xlab("Income (quarterly % change)") +
+    geom_point() +
+    geom_smooth(method="lm", se=FALSE)
+```
+
+An we can estimate the equation in R using tslm() function:
+
+```{r}
+tslm(Consumption ~ Income, data = uschange)
+```
+
+## Multiple regression models
+
+```{r}
+autoplot(uschange[,c("Production", "Savings", "Unemployment")], facets = T, colour = T) + ylab("") + xlab("Year")
+```
+
+Understanding teh correlation between variables
+
+```{r results='hide',fig.keep='all', message=F}
+uschange %>% as.data.frame() %>% GGally::ggpairs()
+```
+
+The first column shows the relationships between the forecast variable (consumption) and each of the predictors. The scatterplots show positive relationships with income and industrial production, and negative relationships with savings and unemployment. The strength of these relationships are shown by the correlation coefficients across the first row. The remaining scatterplots and correlation coefficients show the relationships between the predictors.
+
+## Least squares estimation
+
+The tslm() function fits a linear regression model to time series data. It is similar to the lm() function which is widely used for linear models, but tslm() provides additional facilities for handling time series.
+
+```{r}
+fit.consMR <- tslm(
+  Consumption ~ Income + Production + Unemployment + Savings, 
+  data = uschange)
+summary(fit.consMR)
+```
+
+The following output provides information about the fitted model. The first column of Coefficients gives an estimate of each β coefficient and the second column gives its standard error (i.e., the standard deviation which would be obtained from repeatedly estimating the β coefficients on similar data sets). The standard error gives a measure of the uncertainty in the estimated β coefficient.
+
+### Fitted values
+
+
+```{r}
+autoplot(uschange[,'Consumption'], series="Data") +
+  autolayer(fitted(fit.consMR), series="Fitted") +
+  xlab("Year") + ylab("") +
+  ggtitle("Percent change in US consumption expenditure") +
+  guides(colour=guide_legend(title=" "))
+```
+
+Let's check de errors of the model and their correlation:
+
+```{r}
+cbind(Data = uschange[,"Consumption"],
+      Fitted = fitted(fit.consMR)) %>% 
+  as.data.frame() %>% 
+  ggplot(aes(x = Data, y = Fitted)) +
+    geom_point() +
+    ylab("Fitted (predicted values)") + xlab("Data (actual values)") + ggtitle("Percent change in US consumption expenditure") +
+    geom_abline(intercept=0, slope=1)
+x <- cbind(Data = uschange[,"Consumption"],
+      Fitted = fitted(fit.consMR))
+cor(x)
+```
+
+### Goodness-of-fit
+
+A common way to summarise how well a linear regression model fits the data is via the coefficient of determination, or R squared.
+
+The R squared value is used frequently, though often incorrectly, in forecasting. The value of R squared  will never decrease when adding an extra predictor to the model and this can lead to over-fitting. There are no set rules for what is a good R squared  value, and typical values of R squared depend on the type of data used. Validating a model’s forecasting performance on the test data is much better than measuring the  R squared value on the training data.
+
+The correlation between these variables is r = 0.868 hence R squared = 0.754 (shown in the output above). In this case model does an excellent job as it explains 75.4% of the variation in the consumption data. Compare that to the R squared value of 0.16 obtained from the simple regression with the same data set in the first plot. Adding the three extra predictors has allowed a lot more of the variation in the consumption data to be explained.
+
+### Standard error of the regression
+
+Another measure of how well the model has fitted the data is the standard deviation of the residuals, which is often known as the “residual standard error”. The standard error is related to the size of the average error that the model produces. 
+
+# Evaluating the regression model
+
+## ACF plot of residuals
+
+With time series data, it is highly likely that the value of a variable observed in the current time period will be similar to its value in the previous period, or even the period before that, and so on. Therefore when fitting a regression model to time series data, it is common to find autocorrelation in the residuals. In this case, the estimated model violates the assumption of no autocorrelation in the errors, and our forecasts may be inefficient.
+
+Another useful test of autocorrelation in the residuals designed to take account for the regression model is the Breusch-Godfrey test, also referred to as the LM (Lagrange Multiplier) test for serial correlation. It is used to test the joint hypothesis that there is no autocorrelation in the residuals up to a certain specified order. A small p-value indicates there is significant autocorrelation remaining in the residuals.
+
+## Histogram of residuals
+
+It is always a good idea to check whether the residuals are normally distributed. As we explained earlier, this is not essential for forecasting, but it does make the calculation of prediction intervals much easier.
+
+## Example
+
+```{r}
+checkresiduals(fit.consMR)
+```
+
+The time plot shows some changing variation over time, but is otherwise relatively unremarkable. This heteroscedasticity will potentially make the prediction interval coverage inaccurate.
+
+The histogram shows that the residuals seem to be slightly skewed, which may also affect the coverage probability of the prediction intervals.
+
+The autocorrelation plot shows a significant spike at lag 7, but it is not quite enough for the Breusch-Godfrey to be significant at the 5% level. In any case, the autocorrelation is not particularly large, and at lag 7 it is unlikely to have any noticeable impact on the forecasts or the prediction intervals.
+
+## Residual plots against predictors
+
+We would expect the residuals to be randomly scattered without showing any systematic patterns. A simple and quick way to check this is to examine scatterplots of the residuals against each of the predictor variables. If these scatterplots show a pattern, then the relationship may be nonlinear and the model will need to be modified accordingly.
+
+It is also necessary to plot the residuals against any predictors that are not in the model. If any of these show a pattern, then the corresponding predictor may need to be added to the model (possibly in a nonlinear form).
+
+```{r}
+df <- as.data.frame(uschange)
+df[,"Residuals"]  <- as.numeric(residuals(fit.consMR))
+p1 <- ggplot(df, aes(x=Income, y=Residuals)) +
+  geom_point()
+p2 <- ggplot(df, aes(x=Production, y=Residuals)) +
+  geom_point()
+p3 <- ggplot(df, aes(x=Savings, y=Residuals)) +
+  geom_point()
+p4 <- ggplot(df, aes(x=Unemployment, y=Residuals)) +
+  geom_point()
+gridExtra::grid.arrange(p1, p2, p3, p4, nrow=2)
+```
+
+## Residual plots against fitted values
+
+A plot of the residuals against the fitted values should also show no pattern. If a pattern is observed, there may be “heteroscedasticity” in the errors which means that the variance of the residuals may not be constant. If this problem occurs, a transformation of the forecast variable such as a logarithm or square root may be required
+
+```{r}
+cbind(Fitted = fitted(fit.consMR),
+      Residuals=residuals(fit.consMR)) %>%
+  as.data.frame() %>%
+  ggplot(aes(x=Fitted, y=Residuals)) + geom_point()
+```
+
+The random scatter suggests the errors are homoscedastic.
+
+## Outliers and influential observations
+
+Observations that take extreme values compared to the majority of the data are called outliers. Observations that have a large influence on the estimated coefficients of a regression model are called influential observations. 
+
+One source of outliers is incorrect data entry. Simple descriptive statistics of your data can identify minima and maxima that are not sensible. If such an observation is identified, and it has been recorded incorrectly, it should be corrected or removed from the sample immediately.
+
+Outliers also occur when some observations are simply different. In this case it may not be wise for these observations to be removed. If an observation has been identified as a likely outlier, it is important to study it and analyse the possible reasons behind it. The decision to remove or retain an observation can be a challenging one (especially when outliers are influential observations). It is wise to report results both with and without the removal of such observations.
+
+## Spurious regression
+
+More often than not, time series data are “non-stationary”; that is, the values of the time series do not fluctuate around a constant mean or with a constant variance. Regressing non-stationary time series can lead to spurious regressions. Cases of spurious regression might appear to give reasonable short-term forecasts, but they will generally not continue to work into the future.
+
+# Some useful predictors

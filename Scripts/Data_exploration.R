@@ -4,10 +4,11 @@
 # Libraries and data ----
 
 require(pacman)
-p_load(fpp2, tidyverse, lubridate, plotly, beanplot)
+p_load(fpp2, tidyverse, lubridate, plotly, beanplot, tibbletime)
 
-df2 <- read_rds("Datasets/CleanTotalData.rds")
+df2 <- as_tbl_time(read_rds("Datasets/CleanTotalData.rds"), index = DateTime)
 df2_weather <- read_rds("Datasets/CleanWeatherData.rds")
+
 
 
 # Seasons effect ----
