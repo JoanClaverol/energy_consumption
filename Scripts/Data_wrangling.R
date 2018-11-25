@@ -1,4 +1,4 @@
-# Uploading information fot the energy consumption
+# Load, treat and creation of the energy time series object
 
 # Libraries ----
 require(pacman)

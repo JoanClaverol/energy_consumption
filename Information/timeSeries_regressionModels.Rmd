@@ -176,3 +176,76 @@ Outliers also occur when some observations are simply different. In this case it
 More often than not, time series data are “non-stationary”; that is, the values of the time series do not fluctuate around a constant mean or with a constant variance. Regressing non-stationary time series can lead to spurious regressions. Cases of spurious regression might appear to give reasonable short-term forecasts, but they will generally not continue to work into the future.
 
 # Some useful predictors
+
+## 1. Trend
+
+A trend variable can be specified in the tslm() function using the trend predictor.
+
+## 2. Dummy variables
+
+In case you use categorical values as predictors, you will have to dummify them. This situation can still be handled within the framework of multiple regression models by creating a “dummy variable” which takes value 1 corresponding to “yes” and 0 corresponding to “no”. A dummy variable is also known as an “indicator variable”.
+
+A dummy variable can also be used to account for an **outlier** in the data. Rather than omit the outlier, a dummy variable removes its effect. 
+
+**Important:** tslm() will automatically handle this case if you specify a factor variable as a predictor. There is usually no need to manually create the corresponding dummy variables.
+
+## 3. Seasonal dummy variables
+
+For weekdays: Notice that only six dummy variables are needed to code seven categories. That is because the seventh category (in this case Sunday) is captured by the intercept, and is specified when the dummy variables are all set to zero. Avoid “dummy variable trap”, it will caus the regression to fail. So for quarterly data, use three dummy variables; for monthly data, use 11 dummy variables; and for daily data, use six dummy variables, and so on.
+
+The interpretation of each of the coefficients associated with the dummy variables is that it is a measure of the effect of that category relative to the omitted category. The tslm() function will automatically handle this situation if you specify the predictor season.
+
+## Example
+
+```{r}
+beer2 <- window(ausbeer, start = 1992)
+autoplot(beer2) + xlab("Year") + ylab("Megalitres") + labs(title = "Australian quarterly beer production")
+```
+
+We are going to create a model taking into account the trend and the quarters (The first quarter variable has been omitted, so the coefficients associated with the other quarters are measures of the difference between those quarters and the first quarter.)
+
+```{r}
+fit.beer <- tslm(beer2 ~ trend + season)
+summary(fit.beer)
+```
+
+There is an average downward trend of -0.34 megalitres per quarter. On average, the second quarter has production of 34.7 megalitres lower than the first quarter, the third quarter has production of 17.8 megalitres lower than the first quarter, and the fourth quarter has production of 72.8 megalitres higher than the first quarter.
+
+```{r}
+autoplot(beer2, series="Data") +
+  autolayer(fitted(fit.beer), series="Fitted") +
+  xlab("Year") + ylab("Megalitres") +
+  ggtitle("Quarterly Beer Production")
+```
+
+Plotting the errors: 
+
+```{r}
+cbind(Data=beer2, Fitted=fitted(fit.beer)) %>%
+  as.data.frame() %>%
+  ggplot(aes(x = Data, y = Fitted,
+             colour = as.factor(cycle(beer2)))) +
+    geom_point() +
+    ylab("Fitted") + xlab("Actual values") +
+    ggtitle("Quarterly beer production") +
+    scale_colour_brewer(palette="Dark2", name="Quarter") +
+    geom_abline(intercept=0, slope=1)
+```
+
+
+
+
+```{r}
+hist(beer2)
+fitted(fit.beer) -> x
+
+
+ggplot() +
+  geom_histogram(aes(beer2), fill = "red", alpha = 0.3) +
+  geom_histogram(aes(x), fill = "blue", alpha = 0.3)
+```
+
+```{r}
+10/sqrt(50)
+```
+
