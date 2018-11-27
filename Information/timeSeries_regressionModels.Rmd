@@ -8,8 +8,6 @@ output:
     toc_float: true
     df_print: paged
     code_folding: hide
-  html_notebook: 
-    toc: yes
 ---
 
 ```{r}
@@ -38,7 +36,7 @@ uschange %>%
     geom_smooth(method="lm", se=FALSE)
 ```
 
-An we can estimate the equation in R using tslm() function:
+An we can estimate the equation in R using `tslm()` function:
 
 ```{r}
 tslm(Consumption ~ Income, data = uschange)
@@ -60,7 +58,7 @@ The first column shows the relationships between the forecast variable (consumpt
 
 ## Least squares estimation
 
-The tslm() function fits a linear regression model to time series data. It is similar to the lm() function which is widely used for linear models, but tslm() provides additional facilities for handling time series.
+The `tslm()` function fits a linear regression model to time series data. It is similar to the `lm()` function which is widely used for linear models, but `tslm()` provides additional facilities for handling time series.
 
 ```{r}
 fit.consMR <- tslm(
@@ -182,7 +180,7 @@ More often than not, time series data are “non-stationary”; that is, the val
 
 ## 1. Trend
 
-A trend variable can be specified in the tslm() function using the trend predictor.
+A trend variable can be specified in the `tslm()` function using the trend predictor.
 
 ## 2. Dummy variables
 
@@ -190,13 +188,13 @@ In case you use categorical values as predictors, you will have to dummify them.
 
 A dummy variable can also be used to account for an **outlier** in the data. Rather than omit the outlier, a dummy variable removes its effect. 
 
-**Important:** tslm() will automatically handle this case if you specify a factor variable as a predictor. There is usually no need to manually create the corresponding dummy variables.
+**Important:** `tslm()` will automatically handle this case if you specify a factor variable as a predictor. There is usually no need to manually create the corresponding dummy variables.
 
 ## 3. Seasonal dummy variables
 
 For weekdays: Notice that only six dummy variables are needed to code seven categories. That is because the seventh category (in this case Sunday) is captured by the intercept, and is specified when the dummy variables are all set to zero. Avoid “dummy variable trap”, it will caus the regression to fail. So for quarterly data, use three dummy variables; for monthly data, use 11 dummy variables; and for daily data, use six dummy variables, and so on.
 
-The interpretation of each of the coefficients associated with the dummy variables is that it is a measure of the effect of that category relative to the omitted category. The tslm() function will automatically handle this situation if you specify the predictor season.
+The interpretation of each of the coefficients associated with the dummy variables is that it is a measure of the effect of that category relative to the omitted category. The `tslm()` function will automatically handle this situation if you specify the predictor season.
 
 ### Example
 
@@ -248,19 +246,23 @@ The number of trading days in a month can vary considerably and can have a subst
 For monthly or quarterly data, the `bizdays()` function will compute the number of trading days in each period.
 An alternative that allows for the effects of different days of the week has the following predictors:
 
-*$x_{1}$=number of Mondays in month;
-*$x_{2}$=number of Tuesdays in month;
-\vdots
-*$x_{7}$=number of Sundays in month.
+$x_{1}=number of Mondays in month$;
+$x_{2}=number of Tuesdays in month$;
+
+$\vdots$
+
+$x_{7}=number of Sundays in month$.
 
 ## 6. Distributed lags
 
 It is often useful to include advertising expenditure as a predictor. However, since the effect of advertising can last beyond the actual campaign, we need to include lagged values of advertising expenditure. Thus, the following predictors may be used.
 
-*$x_{1}=advertising for previous month$;
-*$x_{2}=advertising for two months previously$;
-\vdots
-*$x_{m}=advertising for m months previously$.
+$x_{1}=advertising for previous month$;
+$x_{2}=advertising for two months previously$;
+
+$\vdots$
+
+$x_{m}=advertising for m months previously$.
 
 It is common to require the coefficients to decrease as the lag increases.
 
@@ -319,7 +321,7 @@ Maximising $adj.R^2$ works quite well as a method of selecting predictors, altho
 
 For regression models, it is also possible to use classical leave-one-out cross-validation to selection predictors. This is faster and makes more efficient use of the data. The procedure uses the following steps:
 
-1. Remove observation $t$ from the data set, and fit the model using the remaining data. Then compute the error ($e_{t} = y_{t} - \hat{y}_{t}$) for the omitted observations. his is not the same as the residual because the $t$th observation was not used in estimating the value of hat{y}_{t}.
+1. Remove observation $t$ from the data set, and fit the model using the remaining data. Then compute the error ($e_{t} = y_{t} - \hat{y}_{t}$) for the omitted observations. his is not the same as the residual because the $t$th observation was not used in estimating the value of $\hat{y}_{t}$.
 2. Repeat step 1 for $t = 1,\dots,T$.
 3. Compute the MSE from $e_{1},\dots,e_{T}$. We shall call this the CV. 
 
@@ -362,3 +364,70 @@ Alternatively for either the backward or forward direction, a starting model can
 It is important to realise that any stepwise approach is not guaranteed to lead to the best possible model, but it almost always leads to a good model.
 
 # Forecasting with regression
+
+## Ex-ante versus ex-post forecast
+
+### Ex-antes forecasts
+
+Ex-ante forecasts are those that are made using only the information that is available in advance. hese are genuine forecasts, made in advance using whatever information is available at the time. Therefore in order to generate ex-ante forecasts, the model requires forecasts of the predictors. . To obtain these we can use one of the simple methods or more sophisticated pure time series approaches. Alternatively, forecasts from some other source, such as a government agency, may be available and can be used.
+
+### Ex-post forecasts
+
+Ex-post forecasts are those that are made using later information on the predictors. 
+
+The model from which ex-post forecasts are produced should not be estimated using data from the forecast period. 
+
+The model from which ex-post forecasts are produced should not be estimated using data from the forecast period. That is, ex-post forecasts can assume knowledge of the predictor variables (the $x$ variables), but should not assume knowledge of the data that are to be forecast (the $y$ variable).
+
+A comparative evaluation of ex-ante forecasts and ex-post forecasts can help to separate out the sources of forecast uncertainty. This will show whether forecast errors have arisen due to poor forecasts of the predictor or due to a poor forecasting model.
+
+### Example: Australian quarterly beer production
+
+Normally, we cannot use actual future values of the predictor variables when producing ex-ante forecasts because their values will not be known in advance. However, the special predictors introduced in relevant predictors section are all known in advance, as they are based on calendar variables (e.g., seasonal dummy variables or public holiday indicators) or deterministic functions of time (e.g. time trend). In such cases, there is no difference between ex-ante and ex-post forecasts.
+
+```{r}
+beer2 <- window(ausbeer, start=1992)
+fit.beer <- tslm(beer2 ~ trend + season)
+fcast <- forecast(fit.beer)
+autoplot(fcast) +
+  ggtitle("Forecasts of beer production using regression") +
+  xlab("Year") + ylab("megalitres")
+```
+
+## Scenario based forecasting
+
+The forecaster assumes possible scenarios for the predictor variables that are of interest. For example, a US policy maker may be interested in comparing the predicted change in consumption when there is a constant growth of 1% and 0.5% respectively for income and savings with no change in the employment rate, versus a respective decline of 1% and 0.5%, for each of the four quarters following the end of the sample. The resulting forecasts are calculated below. 
+
+We should note that prediction intervals for scenario based forecasts do not include the uncertainty associated with the future values of the predictor variables. They assume that the values of the predictors are known in advance. Example:
+
+```{r}
+fit.consBest <- tslm(
+  Consumption ~ Income + Savings + Unemployment,
+  data = uschange)
+h <- 4
+newdata <- data.frame(
+    Income = c(1, 1, 1, 1),
+    Savings = c(0.5, 0.5, 0.5, 0.5),
+    Unemployment = c(0, 0, 0, 0))
+fcast.up <- forecast(fit.consBest, newdata = newdata)
+newdata <- data.frame(
+    Income = rep(-1, h),
+    Savings = rep(-0.5, h),
+    Unemployment = rep(0, h))
+fcast.down <- forecast(fit.consBest, newdata = newdata)
+autoplot(uschange[, 1]) +
+  ylab("% change in US consumption") +
+  autolayer(fcast.up, PI = TRUE, series = "increase") +
+  autolayer(fcast.down, PI = TRUE, series = "decrease") +
+  guides(colour = guide_legend(title = "Scenario"))
+```
+
+## Building a predicitve regression model
+
+The great advantage of regression models is that they can be used to capture important relationships between the forecast variable of interest and the predictor variables. A major challenge however, is that in order to generate ex-ante forecasts, the model requires future values of each predictor. If scenario based forecasting is of interest then these models are extremely useful. However, if ex-ante forecasting is the main focus, obtaining forecasts of the predictors can be challenging (in many cases generating forecasts for the predictor variables can be more challenging than forecasting directly the forecast variable without using predictors).
+
+An alternative formulation is to use as predictors their lagged values. 
+
+Including lagged values of the predictors does not only make the model operational for easily generating forecasts, it also makes it intuitively appealing. For example, the effect of a policy change with the aim of increasing production may not have an instantaneous effect on consumption expenditure. It is most likely that this will happen with a lagging effect. 
+
+## Prediction intervals
