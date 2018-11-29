@@ -1,6 +1,11 @@
 ---
 title: "Notes from Forecasting with R in DataCamp"
-output: html_notebook
+output: 
+ html_document:
+   toc: true
+   toc_float: true
+   df_print: paged
+   code_folding: hide 
 ---
 
 ```{r}
@@ -157,3 +162,174 @@ for(h in 1:10){
 ```
 
 In summary, `tsCV()` is a good tool from selecting a good forecasting model. In general, the best option is to choose the model with the smallest MSE, so compute it at the forecast horizon of most interest to you. 
+
+# Exponentially weighted forecasts
+
+Two different methods to do a forecast of the data: 
+
+* naive: the most recent observation as forecast for all future periods
+* mean: average of all observations as forecast for all future periods
+
+A forecast in the middle, that take the average of all the observations but give a higher weight to the last ones, thes are teh exponential smoothing forecast. Let's see some examples:
+
+## Simple exponential smoothing
+
+The `ses()` function produces forecasts obtained using simple exponential smoothing (SES). The parameters are estimated using least squares estimation. All you need to specify is the time series and the forecast horizon; the default forecast time is `h = 10` years.
+
+```{r eval=F}
+args(ses)
+function (y, h = 10, ...)
+
+fc <- ses(oilprice, h = 5)
+
+summary(fc)
+
+autoplot(fc) + autolayer(fitted(fc))
+```
+
+You will also use `summary()` and `fitted()`, along with `autolayer()` for the first time, which is like `autoplot()` but it adds a "layer" to a plot rather than creating a new plot.
+
+### SES vs naive 
+
+In this exercise, you will apply your knowledge of training and test sets, the `subset.ts()` function, and the `accuracy()` function, to compare SES and naive forecasts. The process to follo is:
+
+1. First, import and load your data. Determine how much of your data you want to allocate to training, and how much to testing; the sets should not overlap.
+2. Subset the data to create a training set, which you will use as an argument in your forecasting function(s). Optionally, you can also create a test set to use later.
+3. Compute forecasts of the training set using whichever forecasting function(s) you choose, and set `h` equal to the number of values you want to forecast, which is also the length of the test set.
+4. To view the results, use the `accuracy()` function with the forecast as the first argument and original data (or test set) as the second.
+5. Pick a measure in the output, such as RMSE or MAE, to evaluate the forecast(s); a smaller error indicates higher accuracy.
+
+```{r eval=F}
+# Create a training set using subset()
+train <- subset(marathon, end = length(marathon) - 20)
+
+# Compute SES and naive forecasts, save to fcses and fcnaive
+fcses <- ses(train, h = 20)
+fcnaive <- naive(train, h = 20)
+
+# Calculate forecast accuracy measures
+accuracy(fcses, marathon)
+accuracy(fcnaive, marathon)
+
+# Save the best forecasts as fcbest
+fcbest <- fcnaive
+```
+
+## Exponential smoothing methods with trend
+
+Explanation of the different parameters inside Holt's linear trend:
+
+* forecast: the las value since the estimated value
+* level: how the level changes over time as a function of the most recent observation and the previous estimate of the level
+* trend: how the slope changes over time
+
+### Holt's trend methods
+
+Holt's local trend method is implemented in the holt() function:
+
+```{r eval=FALSE}
+holt(y, h = 10, ...)
+```
+
+## Exponential smoothing methods with trend and seasonality
+
+This methdo is called Holt winters'. There are two versions:
+
+*Additive method. We have to define parameters like $m$, the period seasonality (4 quarterly data), his seasonal component averages is zero
+*Multiplicative method, seasonal component averages is one, also has a m parameter. 
+
+Example: 
+
+```{r eval=F}
+aust <- window(austourists, start = 2005)
+fc1 <- hw(aust, seasonal = "additive")
+fc2 <- hw(aust, seasonal = "multiplicative")
+```
+
+Ther are three different giving 9 possible exponential smoothing:
+
+* trend: None addidive od dammed
+* seasonal: none, additive or multilplicative
+
+![](../Information/Images/smoothing_methods.PNG)
+
+```{r}
+# Produce 3 year forecasts
+fc <- hw(a10, seasonal = "multiplicative", h = 3*12)
+
+# Check if residuals look like white noise
+checkresiduals(fc)
+
+whitenoise <- FALSE
+
+# Plot forecasts
+autoplot(fc)
+```
+
+### Holt-Winters method with daily data
+
+The Holt-Winters method can also be used for daily type of data, where the seasonal pattern is of length 7, and the appropriate unit of time for `h` is in days.
+
+```{r eval=F}
+# Create training data with subset()
+train <- subset(hyndsight, end = length(hyndsight) - 7*4)
+
+# Holt-Winters additive forecasts as fchw
+fchw <- hw(train, seasonal = "additive", h = 7*4)
+
+# Seasonal naive forecasts as fcsn
+fcsn <- snaive(train, h = 7*4)
+
+# Find better forecasts with accuracy()
+accuracy(fchw, hyndsight)
+accuracy(fcsn, hyndsight)
+
+# Plot the better forecasts based on RMSE
+autoplot(fchw)
+```
+
+## State space models for exponential smoothing (ETS)
+
+You can have two types of errors (additive or multiplicative), so the models that considers the trebd, seasonality and errors are called ETS. 
+
+ETS models:
+
+Parameters: estimated using the “likelihood”, the probability of the data arising from the specified model:
+
+* For models with additive errors, this is equivalent to minimizing SSE
+* Choose the best model by minimizing a corrected version of Akaike's Information Criterion (AICc)
+
+### Automatic forecasting with exponential smoothing
+
+The namesake function for finding errors, trend, and seasonality (ETS) provides a completely automatic way of producing forecasts for a wide range of time series.
+
+```{r eval=F}
+# Fit ETS model to austa in fitaus
+fitaus <- ets(austa)
+
+# Check residuals
+checkresiduals(fitaus)
+
+# Plot forecasts
+autoplot(forecast(fitaus))
+
+# Repeat for hyndsight data in fiths
+fiths <- ets(hyndsight)
+checkresiduals(fiths)
+autoplot(forecast(fiths))
+
+# Which model(s) fails test? (TRUE or FALSE)
+fitausfail <- FALSE
+fithsfail <- TRUE
+```
+
+### ETS vs seasonal naive
+
+`tsCV()` must return a forecast object, so you need a function to fit a model and return forecasts:
+
+```{r}
+args(tsCV)
+function (y, forecastfunction, h = 1, ...)
+```
+
+
