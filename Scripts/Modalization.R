@@ -120,3 +120,40 @@ lines(df.testing.ts,col = "black", lwd = 2)
 df.testing.results <- df.testing.ts - df.training.forecast.lm$mean
 sum(df.testing.results)# the small result is for hw to predict 2010
 
+
+# day month prediction ----
+library(fpp2)
+df_day <- df %>% 
+  mutate(date = date(DateTime)) %>% 
+  group_by(date) %>% 
+  summarise(mean = mean(ActiveEnergy, na.rm = T))
+
+ts_day <- ts(df_day$mean, 
+             start = 2007,
+             frequency = 365.25)
+
+train <- df_day %>% 
+  filter(date <= "2010-11-15")
+
+test <- df_day %>% 
+  filter(date > "2010-11-15")
+
+ts_train <- ts(train$mean, start = c(2007,1), frequency = 365.25)
+ts_test <- ts(test$mean, start = c(2010, 319), frequency = 365.25)
+
+ts_train_red <- window(ts_train, start = c(2010, 365-60))
+
+ggplot2::autoplot(ts_train_red) +  autolayer(ts_test) + theme_bw()
+
+autoplot(ts_train)
+
+autoplot(ts_day)
+autoplot(decompose(ts_day))
+
+mod.ts_day <- tslm(ts_day ~trend + season)
+
+forecast(mod.ts_day, h = 4)
+
+autoplot(mod.ts_day)
+
+pred_day <- window(ts)

@@ -47,7 +47,7 @@ x <- df1 %>% filter((Date == timeChange.Summer | Date == timeChange.Winter) & be
 
 # Unification of the information and changing the format
 df1 <- df1 %>% unite(col = DateTime, Date, Time, sep = " ") 
-df1$DateTime <-  parse_datetime(df1$DateTime, locale = locale(tz = "GMT"))
+df1$DateTime <- parse_datetime(df1$DateTime, locale = locale(tz = "GMT"))
 
 # Treating NAs ----
 

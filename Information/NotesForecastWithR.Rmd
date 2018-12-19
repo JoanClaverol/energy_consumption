@@ -259,7 +259,6 @@ fc <- hw(a10, seasonal = "multiplicative", h = 3*12)
 
 # Check if residuals look like white noise
 checkresiduals(fc)
-
 whitenoise <- FALSE
 
 # Plot forecasts
@@ -327,7 +326,7 @@ fithsfail <- TRUE
 
 `tsCV()` must return a forecast object, so you need a function to fit a model and return forecasts:
 
-```{r}
+```{r eval=F}
 args(tsCV)
 function (y, forecastfunction, h = 1, ...)
 ```
