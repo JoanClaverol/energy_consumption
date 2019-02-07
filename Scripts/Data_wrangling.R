@@ -1,4 +1,4 @@
-# Uploading information fot the energy consumption
+# Load, treat and creation of the energy time series object
 
 # Libraries ----
 require(pacman)
@@ -7,14 +7,14 @@ p_load(tidyverse, mice, lubridate)
 # Uploading data ----
 
 # House data
-df1 <- read_delim("Datasets/household_power_consumption.txt", delim = ";", col_types = cols(
-  Date = col_date(format = "%d/%m/%Y")
-))
+df1 <- read_delim("Datasets/household_power_consumption.txt", delim = ";", 
+                  col_types = cols(
+                    Date = col_date(format = "%d/%m/%Y")
+                    )
+                  )
 
 # Weather region data
 weather <- read_csv("Datasets/weather_conditions.csv") # downloaded for the webpage https://www.ncdc.noaa.gov
-
-
 
 # weather dataset exploration ----
 
@@ -45,7 +45,7 @@ x <- df1 %>% filter((Date == timeChange.Summer | Date == timeChange.Winter) & be
 
 # Unification of the information and changing the format
 df1 <- df1 %>% unite(col = DateTime, Date, Time, sep = " ") 
-df1$DateTime <-  parse_datetime(df1$DateTime, locale = locale(tz = "GMT"))
+df1$DateTime <- parse_datetime(df1$DateTime, locale = locale(tz = "GMT"))
 
 # Treating NAs ----
 

@@ -9,8 +9,7 @@ p_load(shiny, shinydashboard, dplyr, ggplot2, plotly, lubridate)
 
 # Loading data
 
-data <- readr::read_rds("Datasets/CleanData.rds")
-
+data <- readr::read_rds("Datasets/CleanTotalData.rds")
 
 # Shiny application ----
 
@@ -23,22 +22,22 @@ ui <- dashboardPage(
   ),
   # Sidebar
   dashboardSidebar(
-    menuItem(text = "Total energy consumed", label = "totalEnergy")
+    menuItem(text = "Seasons and week consumption", label = "totalEnergy"),
+    menuItem(text = "Predictions", label = "predictions")
   ),
   
   # Body
   dashboardBody(
-    box(plotOutput("totalEnergyConsumed"))
+    box(plotOutput("totalEnergyConsumed"), width = "100%")
   )
 )
 
 server <- function(input, output) {
   output$totalEnergyConsumed <- renderPlot(
-    data %>% 
-               group_by(date(DateTime)) %>% summarise(mean = mean(ActiveEnergy)) %>%
-               ggplot(aes(`date(DateTime)`, mean)) + geom_line(color = "firebrick1") + geom_smooth(se = F) + 
-               labs(title = "Total active energy consumed by day") + ylab("Watt/h") + xlab("Time") + theme_light()
-    
+    data %>%
+      group_by(date(DateTime)) %>% summarise(mean = mean(ActiveEnergy)) %>%
+      ggplot(aes(`date(DateTime)`, mean)) + geom_line(color = "firebrick1") + geom_smooth(se = F) + 
+      labs(title = "Total active energy consumed by day") + ylab("Watt/h") + xlab("Time") + theme_light()
   )
 }
 
