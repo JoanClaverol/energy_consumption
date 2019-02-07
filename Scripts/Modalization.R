@@ -10,8 +10,8 @@ df.weather <- read_rds("Datasets/CleanWeatherData.rds")
 
 # Prepare and analyse the data ----
 
-# We are going to start the analysys from 2017-01-01
-m.df <- df %>%
+# We are going to start the analysys from 2017-01-01, so let's filter it
+data.month <- df %>%
   filter(year(DateTime) > 2006) %>% 
   mutate(year = year(DateTime), 
          month = month(DateTime)) %>%
@@ -24,43 +24,78 @@ m.df <- df %>%
 
 # time series creation ----
 
-mts<- ts(m.df[,"ActiveEnergy_avg"], start = c(2007), frequency = 12)
-
+# creation by month
+ts.month <- ts(data.month, start = c(2007), frequency = 12)
 
 # visualization ----
 
-autoplot(mts) + ylab("energy consumed in Watts/h") + labs(title = "Average energy consumed by month")
+# whole data visualzation
+plot(ts.month[,c("ActiveEnergy_avg","Kitchen_avg",
+                 "Laundry_avg","AirWarm_avg","Unknown_avg")], 
+     main = "Average energy by month in relation to each month")
+
+# Series decomposition ----
+
+# decomposition total energy consumed by month 
+plot(decompose(ts.month[,"ActiveEnergy_avg"], 
+               type = c("additive")))
+
+# decomposition Kitchen 
+plot(decompose(ts.month[,"ActiveEnergy_avg"], 
+               type = c("additive")))
+
+# decomposition Laundry
+plot(decompose(ts.month[,"Laundry_avg"], 
+               type = c("additive")))
+
+# decomposition AirWater heater
+plot(decompose(ts.month[,"AirWarm_avg"],
+               type = c("multiplicative"))) # !!! Its trend is increasing a lot, why? Applienc analysys
+
+# decomposition unknown energy spending
+plot(decompose(ts.month[,"Unknown_avg"],
+               type = c("additive")))
+
+# Applience analysis: train and test ---- 
+train.ts <- window(ts.month[,"AirWarm_avg"], end = c(2009, 12))
+test.ts <- window(ts.month[,"AirWarm_avg"], start = c(2010, 1))
+
+# 1st forecasting ----
+
+numberPeriods <- length(test.ts)
+mod.meanForecast <- meanf(train.ts, h = numberPeriods)
+mod.driftMethod <- rwf(train.ts, h = numberPeriods)
+mod.seasonalNaive <- snaive(train.ts, h = numberPeriods)
+
+# ploting the models
+autoplot(train.mts[,"ActiveEnergy_avg"]) +
+  autolayer(mod.seasonalNaive$mean, series = "Season naïve method") +
+  autolayer(mod.meanForecast$mean, series = "Mean method") +
+  autolayer(mod.driftMethod$mean, series = "Naïve method") +
+  theme_bw() + ylab("Energy consumed in avg")
+
+# checking the results
+accuracy(mod.seasonalNaive, test.ts)
+checkresiduals(mod.seasonalNaive)
 
 
-# train and test ----
-
-train.mts <- window(mts, end = c(2009, 11))
-test.mts <- window(mts, start = c(2009, 12))
 
 
-# modalization with seasonal algorithms ----
-
-h <- length(test.mts)
-m.mf <- meanf(train.mts, h = h)
-m.rw <- rwf(train.mts, h = h)
-m.sn <- snaive(train.mts, h = h)
-
-autoplot(train.mts) +
-  autolayer(m.sn, series = "Season naïve method") +
-  autolayer(m.mf$mean, series = "Mean method") +
-  autolayer(m.rw$mean, series = "Naïve method")
-
-accuracy(m.sn, test.mts)
-checkresiduals(m.sn)
-
-# Modalization ----
 
 
-####    Forecasting   ####
-# Doing a linear model with the tsml() function
-df.ts.hw <- HoltWinters(df.ts, gamma = TRUE)
+
+
+
+
+
+
+# 2nd forecasting ----
+
+# Applying HoltWinters
+ts.holtWinters <- HoltWinters(ts.month, gamma = TRUE)
+
 # Haremos la predicción a dos anyos vista con el método de holt winters
-df.forecast.hw <- forecast(df.ts.hw, h = 24)
+df.forecast.hw <- forecast(ts.holtWinters[,"ActiveEnergy_avg"], h = 24)
 plot(df.forecast.hw, main = "Forecast from HoltWinters in months")
 
 # Creación de modelos autorregresivo de media móvil. Con arima intentaremos crear un modelo que nos permita ajustar diferentes partes del mismo. Porque surt igual???

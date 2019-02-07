@@ -16,8 +16,6 @@ df1 <- read_delim("Datasets/household_power_consumption.txt", delim = ";",
 # Weather region data
 weather <- read_csv("Datasets/weather_conditions.csv") # downloaded for the webpage https://www.ncdc.noaa.gov
 
-
-
 # weather dataset exploration ----
 
 # 
