@@ -18,7 +18,6 @@ weather <- read_csv("Datasets/weather_conditions.csv") # downloaded for the webp
 
 # weather dataset exploration ----
 
-# 
 summary(weather)
 mice::md.pattern(weather)
 
@@ -59,42 +58,28 @@ read_rds("Scripts/Information/NAnalysis.rds")
 # All the NAs are in the same rows. No information for submeters and any other energy indicator
 
 # Which strategy I have to follow to deal with NAs? Distribution of NAs across the time
-
 all.NAs <- df1  %>% 
   filter(is.na(Global_active_power)) 
-all.NAs %>% mutate(date = date(DateTime)) %>% 
-  ggplot(aes(date)) + geom_bar(fill = "red") + theme_light() + labs(title = "Quantity of NAs in relation to the day of the year")
+all.NAs %>% 
+  mutate(date = date(DateTime)) %>% 
+  ggplot(aes(date)) + geom_bar(fill = "red") + 
+  theme_light() +
+  labs(title = "Quantity of NAs in relation to the day of the year")
 
-# Undesrtanding how the NAs are distributed
-# When we find more than 4 hours of NAs, we consider there had been a black out, so we will assume that all the values have 0 value.
+# Goal: create a function to replace the NA for the previous value
+na_imputation <- function(vector) {
+  for (i in 1:length(vector)) {
+    if (is.na(vector[i])) {
+      vector[i] <- vector[i-10080] # replacinmg NAs with 1 week previous values
+    }
+  }
+  return(vector)
+}
 
-MissInfo <- "2006-12-21" # two minutes without information
-BlackOut <- "2007-04-28" # black out, more than 4 hours without information
-
-test.MissInfo <- df1 %>% filter(date(DateTime) == MissInfo) %>% select(DateTime,Global_active_power)
-test.BlackOut <- df1 %>% filter(date(DateTime) == BlackOut) %>% select(DateTime,Global_active_power)
-
-allinfo <- bind_rows(test.BlackOut,test.MissInfo)
-
-# Replacing the NAs for 0 for this two cases
-test <- test.BlackOut %>% 
-  replace_na(list(Global_active_power = 0))
-
-test <- test.MissInfo %>%
-  fill(Global_active_power, .direction = c("down"))
-
-# We consider a blackout is after one hour
-
-
-# Too much work for the following number rows: 1.25% og the total data
-sum(is.na(df1$Global_active_power))/length(df1$Global_active_power)*100
-
-# Giving a 0 value to all NAs
-df1[is.na(df1)] <- 0
-anyNA(0) # there ar no NAs
-
-# Different hour zone treatment
-
+energy_var <- c("Global_active_power","Global_reactive_power",
+                "Voltage","Global_intensity","Sub_metering_1",
+                "Sub_metering_2","Sub_metering_3")
+df1[,energy_var] <- apply(df1[,energy_var], 2, na_imputation)
 
 
 # Rename and select variables ----
