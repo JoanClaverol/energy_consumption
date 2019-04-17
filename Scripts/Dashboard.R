@@ -42,3 +42,22 @@ server <- function(input, output) {
 }
 
 shinyApp(ui, server)
+
+
+
+# dataset to work with ----------------------------------------------------
+
+df <- data %>% 
+  select(-season, -wday, -Period.Day, -Intensity, -ReactiveEnergy) %>% 
+  group_by(date = date(DateTime)) %>% 
+  summarise(ActiveEnergy_avg = mean(ActiveEnergy), 
+            Kitchen_avg = mean(Kitchen),
+            Laundry_avg = mean(Laundry),
+            W.A_HeatCold_avg = mean(W.A_HeatCold),
+            UnkownEnergy_avg = mean(UnkownEnergy))
+
+round_var <- c("ActiveEnergy_avg","Kitchen_avg", "Laundry_avg",
+               "W.A_HeatCold_avg","UnkownEnergy_avg")
+
+df[,round_var] <- apply(df[,round_var], 2, round)
+
